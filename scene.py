@@ -27,6 +27,7 @@ class ConnectionScene(Scene):
         self.game.enemies = []
         self.game.pickups = []
         self.since_enemy = 0
+        self.game.scroll_speed = 0
         self.spawn_dasher()
 
         while True:
@@ -36,6 +37,7 @@ class ConnectionScene(Scene):
             self.corridor.update(dt, events)
             self.player.update(dt, events)
             self.game.update_screenshake(dt, events)
+            self.update_scrolling(dt, events)
             self.update_enemies(dt, events)
             self.update_pickups(dt, events)
             self.update_particles(dt, events)
@@ -50,6 +52,12 @@ class ConnectionScene(Scene):
                 pickup.draw(self.game.screen)
             self.player.draw(self.game.screen)
             pygame.display.flip()
+
+    def update_scrolling(self, dt, events):
+        if self.game.scroll_speed < 350:
+            self.game.scroll_speed += 200 * dt
+            if self.game.scroll_speed >= 350:
+                self.game.scroll_speed = 350
 
     def update_pickups(self, dt, events):
         for item in self.game.pickups[::-1]:

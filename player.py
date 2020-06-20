@@ -15,7 +15,7 @@ class Player:
         self.width = 64
         self.height = 64
 
-        self.x = c.WINDOW_WIDTH/4
+        self.x = c.WINDOW_WIDTH/3
         self.y = c.WINDOW_HEIGHT//2 + self.game.corridor.width//2 - self.height//2
 
         self.y_velocity = 0
