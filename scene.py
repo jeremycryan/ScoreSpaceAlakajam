@@ -25,6 +25,7 @@ class ConnectionScene(Scene):
         self.corridor.x = 0
         self.player = self.game.player
         self.game.enemies = []
+        self.game.pickups = []
         self.since_enemy = 0
         self.spawn_dasher()
 
@@ -34,14 +35,34 @@ class ConnectionScene(Scene):
 
             self.corridor.update(dt, events)
             self.player.update(dt, events)
+            self.game.update_screenshake(dt, events)
             self.update_enemies(dt, events)
+            self.update_pickups(dt, events)
+            self.update_particles(dt, events)
 
-            self.game.screen.fill(c.WHITE)
+            self.game.screen.fill((120, 120, 120))
             self.corridor.draw(self.game.screen)
+            for particle in self.game.particles:
+                particle.draw(self.game.screen)
             for enemy in self.game.enemies:
                 enemy.draw(self.game.screen)
+            for pickup in self.game.pickups:
+                pickup.draw(self.game.screen)
             self.player.draw(self.game.screen)
             pygame.display.flip()
+
+    def update_pickups(self, dt, events):
+        for item in self.game.pickups[::-1]:
+            item.update(dt, events)
+            if c.distance_between_points(item.x, item.y, self.player.x, self.player.y) < self.player.width//2:
+                item.get()
+                self.game.pickups.remove(item)
+
+    def update_particles(self, dt, events):
+        for particle in self.game.particles[::-1]:
+            particle.update(dt, events)
+            if particle.dead:
+                self.game.particles.remove(particle)
 
     def update_enemies(self, dt, events):
         for enemy in self.game.enemies:
@@ -54,9 +75,9 @@ class ConnectionScene(Scene):
             random.choice(choices)()
             self.since_enemy = 0
         for enemy in self.game.enemies[::-1]:
-            if enemy.x < -500 or enemy.x > c.WINDOW_WIDTH + 500 or enemy.y < -500 or enemy.y > c.WINDOW_HEIGHT + 500:
+            if enemy.dead and enemy.remove_on_death:
                 self.game.enemies.remove(enemy)
-            if enemy.dead:
+            elif enemy.x < -500 or enemy.x > c.WINDOW_WIDTH + 500 or enemy.y < -500 or enemy.y > c.WINDOW_HEIGHT + 500:
                 self.game.enemies.remove(enemy)
 
     def spawn_dasher(self):

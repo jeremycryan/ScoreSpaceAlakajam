@@ -24,10 +24,13 @@ class Corridor:
         pass
 
     def draw(self, surface):
+        sx, sy = self.game.get_shake_offset()
+
         offset = self.x % 200
-        x = -self.x % 200 - 200
+        x = -self.x + sx % 200 - 200
         while x < c.WINDOW_WIDTH + 100:
             surface.blit(self.bar, (x, 0))
             x += 200
-        surface.blit(self.top, (-self.margin, -self.margin))
-        surface.blit(self.bottom, (-self.margin, c.WINDOW_HEIGHT//2 + self.width//2))
+
+        surface.blit(self.top, (-self.margin + sx, -self.margin + sy))
+        surface.blit(self.bottom, (-self.margin + sx, c.WINDOW_HEIGHT//2 + self.width//2 + sy))

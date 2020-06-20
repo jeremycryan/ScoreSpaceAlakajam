@@ -24,6 +24,9 @@ class Player:
 
         self.surf = pygame.Surface((self.width, self.height))
 
+        self.since_hit = 10
+        self.invincibility_period = 1
+
     def update(self, dt, events):
         if pygame.mouse.get_pressed()[0]:
             self.shoot()
@@ -33,6 +36,7 @@ class Player:
         self.x_velocity *= 0.0005**dt
         self.x += self.x_velocity * dt
         self.bullet_cooldown += dt
+        self.since_hit += dt
 
         self.collide_corridor(self.game.corridor)
         self.update_movement(dt, events)
@@ -96,7 +100,9 @@ class Player:
             surf.fill(c.RED)
         else:
             surf.fill(c.GREEN)
-        surface.blit(surf, (self.x - self.width//2, self.y - self.height//2))
+        sx, sy = self.game.get_shake_offset()
+        x, y = int(self.x + sx), int(self.y + sy)
+        surface.blit(surf, (x - self.width//2, y - self.height//2))
 
         for bullet in self.bullets:
             bullet.draw(surface)
@@ -115,7 +121,8 @@ class Player:
         new_bullet = Bullet(self.game, self.x, self.y, dir)
         self.bullets.add(new_bullet)
 
-        recoil = 100
+        recoil = 80
+        self.game.shake(3)
         self.x_velocity -= recoil * dir[0]
         if not self.on_floor():
             self.y_velocity -= recoil * dir[1]
@@ -133,3 +140,9 @@ class Player:
         elif self.y - self.height//2 < c.WINDOW_HEIGHT//2 - corridor.width//2:
             self.y = c.WINDOW_HEIGHT//2 - corridor.width//2 + self.height//2
             self.y_velocity = 0
+
+    def get_hit_by(self, enemy):
+        if self.since_hit < self.invincibility_period:
+            return
+        self.game.shake(25)
+        self.since_hit = 0

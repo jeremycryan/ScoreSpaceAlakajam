@@ -31,4 +31,5 @@ class Bullet:
     def draw(self, surface):
         x = int(self.x)
         y = int(self.y)
-        pygame.draw.circle(surface, c.RED, (x, y), self.radius)
+        sx, sy = self.game.get_shake_offset()
+        pygame.draw.circle(surface, c.RED, (int(x + sx), int(y + sy)), self.radius)
