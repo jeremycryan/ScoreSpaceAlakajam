@@ -27,6 +27,7 @@ class Cash(Pickup):
         self.sprite = Sprite(10)
         self.sprite.add_animation({"Idle": random.choice([cash1, cash2, cash3])})
         self.sprite.start_animation("Idle")
+        self.sprite.now += random.random()
 
         xv = random.random()**2 * 1300
         yv = random.random()**2 * -300 - 100

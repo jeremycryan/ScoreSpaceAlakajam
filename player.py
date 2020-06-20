@@ -1,14 +1,19 @@
 import pygame
 import constants as c
 from bullet import Bullet
+from sprite_tools import SpriteSheet, Sprite
+import math
+
+
+player_running = SpriteSheet("images/player.png", (1, 1), 1, scale=2)
 
 
 class Player:
     def __init__(self, game):
         self.game = game
 
-        self.width = 48
-        self.height = 48
+        self.width = 64
+        self.height = 64
 
         self.x = c.WINDOW_WIDTH/4
         self.y = c.WINDOW_HEIGHT//2 + self.game.corridor.width//2 - self.height//2
@@ -22,7 +27,11 @@ class Player:
         self.bullet_cooldown = 0
         self.bullet_period = 0.10
 
-        self.surf = pygame.Surface((self.width, self.height))
+        self.sprite = Sprite(10)
+        self.sprite.add_animation({"Running": player_running})
+        self.sprite.start_animation("Running")
+        self.gun = pygame.image.load("images/player_gun.png")
+        self.gun = pygame.transform.scale(self.gun, (self.gun.get_width()*2, self.gun.get_height()*2))
 
         self.since_hit = 10
         self.invincibility_period = 1
@@ -93,16 +102,19 @@ class Player:
                 self.extra_jumps -= 1
 
     def draw(self, surface):
-        surf = self.surf
-        if self.on_floor():
-            surf.fill(c.BLUE)
-        elif self.extra_jumps == 0:
-            surf.fill(c.RED)
-        else:
-            surf.fill(c.GREEN)
         sx, sy = self.game.get_shake_offset()
         x, y = int(self.x + sx), int(self.y + sy)
-        surface.blit(surf, (x - self.width//2, y - self.height//2))
+        self.sprite.set_position((x, y))
+        self.sprite.draw(surface)
+
+        mpos = pygame.mouse.get_pos()
+        dx = mpos[0] - self.x
+        dy = mpos[1] - self.y
+        angle = -math.atan2(dy, dx) * 180 / math.pi
+        gun = pygame.transform.rotate(self.gun, angle)
+        gx = x - gun.get_width()//2
+        gy = y - gun.get_height()//2 - 14
+        surface.blit(gun, (gx, gy))
 
         for bullet in self.bullets:
             bullet.draw(surface)
