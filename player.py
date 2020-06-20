@@ -36,14 +36,18 @@ class Player:
         self.since_hit = 10
         self.invincibility_period = 1
 
+        self.movement_enabled = True
+        self.in_bus = False
+
     def update(self, dt, events):
         if pygame.mouse.get_pressed()[0]:
             self.shoot()
 
-        self.y_velocity += 2500 * dt
-        self.y += self.y_velocity * dt
-        self.x_velocity *= 0.0005**dt
-        self.x += self.x_velocity * dt
+        if self.movement_enabled:
+            self.y_velocity += 2500 * dt
+            self.y += self.y_velocity * dt
+            self.x_velocity *= 0.0005**dt
+            self.x += self.x_velocity * dt
         self.bullet_cooldown += dt
         self.since_hit += dt
 
@@ -60,6 +64,9 @@ class Player:
         self.bullets -= to_destroy
 
     def update_movement(self, dt, events):
+        if not self.movement_enabled:
+            return
+
         pressed = pygame.key.get_pressed()
         if self.on_floor():
             acceleration = 6000
@@ -154,6 +161,8 @@ class Player:
             self.y_velocity = 0
 
     def get_hit_by(self, enemy):
+        if self.in_bus == True:
+            return
         if self.since_hit < self.invincibility_period:
             return
         self.game.shake(25)

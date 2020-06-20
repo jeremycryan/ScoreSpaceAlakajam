@@ -1,6 +1,6 @@
 import pygame
 import constants as c
-from subway import Subway
+from subway import Subway, EndSubway
 
 
 class Corridor:
@@ -30,11 +30,13 @@ class Corridor:
         self.platform_tile = pygame.image.load("images/platform_tile.png")
 
         self.subway = Subway(self.game)
+        self.end_subway = EndSubway(self.game, 4000)
 
 
     def update(self, dt, events):
         self.x += self.game.scroll_speed * dt
         self.subway.update(dt, events)
+        self.end_subway.update(dt, events)
         pass
 
     def draw(self, surface):
@@ -59,6 +61,7 @@ class Corridor:
         surface.blit(self.bottom, (-self.margin + sx, c.WINDOW_HEIGHT//2 + self.width//2 + sy))
 
         self.subway.draw(surface)
+        self.end_subway.draw(surface)
 
         w = self.platform_tile.get_width()
         x = -self.x + sx % w - w

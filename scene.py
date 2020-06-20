@@ -17,22 +17,63 @@ class Scene:
         raise NotImplementedError("Scene must implement next_scene")
 
 
+class OnBusScene(Scene):
+    def main(self):
+        self.car_surf = pygame.image.load("images/subway_car_interior.png")
+        clock = pygame.time.Clock()
+
+        while True:
+            dt = clock.tick(60)
+            events = self.game.update_globals()
+
+    def draw_subway_car(self):
+        x = c.WINDOW_WIDTH//2 - self.car_surf.get_width()//2
+        y = c.WINDOW_HEIGHT//2 - self.car_surf.get_height()//2
+
+    def next_scene(self):
+        return ConnectionScene()
+
+
 class ConnectionScene(Scene):
+
+    def next_scene(self):
+        return ConnectionScene(self.game)
 
     def main(self):
         clock = pygame.time.Clock()
-        self.corridor = self.game.corridor
+        self.corridor = Corridor(self.game)
         self.corridor.x = 0
         self.player = self.game.player
+        self.player.movement_enabled = True
+        self.player.in_bus = False
         self.game.enemies = []
         self.game.pickups = []
         self.since_enemy = 0
         self.game.scroll_speed = 0
-        self.spawn_dasher()
+
+        self.circle_radius = 0
 
         while True:
             dt = clock.tick(60)/1000
             events = self.game.update_globals()
+
+            circle_speed = 800
+            if self.scene_over():
+                if self.circle_radius <= 0:
+                    break
+                self.circle_radius -= circle_speed * dt
+                if self.circle_radius <= 0:
+                    self.circle_radius = 0
+                self.player.movement_enabled = False
+                self.player.in_bus = True
+                dx = self.corridor.end_subway.x + 475 - self.player.x
+                dy = c.WINDOW_HEIGHT * 0.7 - self.player.y
+                self.player.x += dx*dt*4
+                self.player.y += dy*dt*4
+            else:
+                self.circle_radius += circle_speed * dt
+                if self.circle_radius >= c.WINDOW_WIDTH:
+                    self.circle_radius = c.WINDOW_WIDTH
 
             self.corridor.update(dt, events)
             self.player.update(dt, events)
@@ -51,7 +92,22 @@ class ConnectionScene(Scene):
             for pickup in self.game.pickups:
                 pickup.draw(self.game.screen)
             self.player.draw(self.game.screen)
+            self.draw_circle(self.game.screen)
             pygame.display.flip()
+
+    def draw_circle(self, surface):
+        width = max(1, int(700 - self.circle_radius))
+        if self.circle_radius >= c.WINDOW_WIDTH:
+            return
+        rad = int(self.circle_radius)
+        x, y = int(self.game.player.x), int(self.game.player.y)
+        pygame.draw.circle(surface, c.BLACK, (x, y), rad + width, width)
+
+
+    def scene_over(self):
+        if self.corridor.end_subway.x + 430 + 80 >= self.player.x >= self.corridor.end_subway.x + 430 and self.player.y >= c.WINDOW_HEIGHT//2:
+            return True
+        return False
 
     def update_scrolling(self, dt, events):
         if self.game.scroll_speed < 350:
@@ -76,7 +132,7 @@ class ConnectionScene(Scene):
         for enemy in self.game.enemies:
             enemy.update(dt, events)
         self.since_enemy += dt
-        if self.since_enemy > 1:
+        if self.since_enemy > 1 and self.game.scroll_speed > 100:
             choices = [self.spawn_crawler_wave,
                     self.spawn_crawler_ceiling_wave,
                     self.spawn_dasher]

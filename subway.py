@@ -61,7 +61,10 @@ class Subway:
 
             surface.blit(self.door_hole, (self.x + sx + msx + 423, self.y + sy + msy + 62))
             open_amt = 40
-            doff = int(open_amt * self.doors_open)
+            if i == 0:
+                doff = int(open_amt * self.doors_open)
+            else:
+                doff = 0
             surface.blit(self.door_left, (self.x + sx + msx + 431 - doff, self.y + sy + msy + 68))
             surface.blit(self.door_right, (self.x + sx + msx + 431 + self.door_left.get_width() + doff, self.y + sy + msy + 68))
             surface.blit(self.car, (self.x + sx + msx, self.y + sy + msy))
@@ -72,3 +75,26 @@ class Subway:
         if self.x <= c.WINDOW_WIDTH and self.x > - c.WINDOW_WIDTH:
             return True
         return False
+
+
+class EndSubway(Subway):
+    def __init__(self, game, position):
+        super().__init__(game)
+        self.x = position
+
+    def update(self, dt, events):
+        self.age += dt
+        self.doors_open = min(max(0, self.doors_open + self.door_speed*dt), 1)
+        self.x -= self.game.scroll_speed * dt
+        if self.x <= c.WINDOW_WIDTH:
+            self.game.scroll_speed = min(self.game.scroll_speed, (self.x + 430 - c.WINDOW_WIDTH/3))
+
+        if self.moving:
+            if c.distance_between_points(*self.shake_target, *self.shake_position) < 5:
+                self.shake_position = [random.random() * 2 - 1, random.random() * 2 - 1]
+            dx = self.shake_target[0] - self.shake_position[0]
+            dy = self.shake_target[1] - self.shake_position[1]
+            self.shake_position[0] += dx * 2
+            self.shake_position[1] += dy * 2
+            self.speed += self.accel * dt
+            self.x += self.speed * dt

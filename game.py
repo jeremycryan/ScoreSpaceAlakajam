@@ -44,7 +44,9 @@ class Game:
 
     def main(self):
         current_scene = ConnectionScene(self)
-        current_scene.main()
+        while True:
+            current_scene.main()
+            current_scene = current_scene.next_scene()
 
 
 
