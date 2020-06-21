@@ -5,6 +5,9 @@ from scene import *
 import math
 import time
 
+from title_screen import TitleScreen
+from lose_screen import LoseScreen
+
 
 class Game:
     def __init__(self):
@@ -22,6 +25,9 @@ class Game:
         self.ledger_font = pygame.font.Font("fonts/Pixeled.ttf", 10)
         self.score_font = pygame.font.Font("fonts/Pixeled.ttf", 20)
         self.score = 0
+        self.slowdown = 1.0
+        self.flash_alpha = 0
+        pygame.display.set_caption("Public Transit Battle Corgi Tycoon")
         self.main()
 
     def update_screenshake(self, dt, events):
@@ -47,7 +53,7 @@ class Game:
         return events
 
     def main(self):
-        current_scene = ConnectionScene(self)
+        current_scene = TitleScreen(self)
         while True:
             current_scene.main()
             current_scene = current_scene.next_scene()

@@ -6,6 +6,8 @@ import math
 
 
 player_running = SpriteSheet("images/player.png", (1, 1), 1, scale=2)
+player_dead = SpriteSheet("images/player_dead.png", (1, 1), 1, scale=2)
+player_hit = SpriteSheet("images/player_hit.png", (1, 1), 1, scale=2)
 
 
 class Player:
@@ -27,8 +29,8 @@ class Player:
         self.bullet_cooldown = 0
         self.bullet_period = 0.10
 
-        self.sprite = Sprite(10)
-        self.sprite.add_animation({"Running": player_running})
+        self.sprite = Sprite(7)
+        self.sprite.add_animation({"Running": player_running, "Dead": player_dead, "Hit": player_hit})
         self.sprite.start_animation("Running")
         self.gun = pygame.image.load("images/player_gun.png")
         self.gun = pygame.transform.scale(self.gun, (self.gun.get_width()*2, self.gun.get_height()*2))
@@ -43,6 +45,8 @@ class Player:
         self.cash_this_level = 0
         self.dead = False
 
+        self.hp = 3
+
     def update(self, dt, events):
         if pygame.mouse.get_pressed()[0]:
             self.shoot()
@@ -54,6 +58,9 @@ class Player:
             self.x += self.x_velocity * dt
         self.bullet_cooldown += dt
         self.since_hit += dt
+
+        if self.since_hit >= 0.05 and not self.dead:
+            self.sprite.start_animation("Running")
 
         self.collide_corridor(self.game.corridor)
         self.update_movement(dt, events)
@@ -67,6 +74,15 @@ class Player:
                 to_destroy.add(bullet)
         self.bullets -= to_destroy
 
+        self.sprite.update(dt)
+
+    def die(self):
+        self.game.scroll_speed = 0
+        self.dead = True
+        self.x_velocity = 500
+        self.y_velocity = -1000
+        self.sprite.start_animation("Dead")
+
     def update_movement(self, dt, events):
         if not self.movement_enabled:
             return
@@ -78,18 +94,20 @@ class Player:
             acceleration = 3000
         max_speed = 500
 
-        if pressed[pygame.K_a]:
-            self.x_velocity -= dt * acceleration
-        if pressed[pygame.K_d]:
-            self.x_velocity += dt * acceleration
-        if pressed[pygame.K_w]:
-            if not self.on_floor():
-                self.y_velocity -= 1400*dt
+        if not self.dead:
+            if pressed[pygame.K_a]:
+                self.x_velocity -= dt * acceleration
+            if pressed[pygame.K_d]:
+                self.x_velocity += dt * acceleration
+            if pressed[pygame.K_w]:
+                if not self.on_floor():
+                    self.y_velocity -= 1400*dt
 
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_w:
-                    self.jump()
+                    if not self.dead:
+                        self.jump()
 
         invisible_force = 40
         if not self.on_floor():
@@ -122,6 +140,8 @@ class Player:
         dx = mpos[0] - self.x
         dy = mpos[1] - self.y
         angle = -math.atan2(dy, dx) * 180 / math.pi
+        if self.dead:
+            angle = 0
         gun = pygame.transform.rotate(self.gun, angle)
         gx = x - gun.get_width()//2
         gy = y - gun.get_height()//2 - 14
@@ -132,6 +152,10 @@ class Player:
 
     def shoot(self):
         if not self.bullet_cooldown > self.bullet_period:
+            return
+        if self.dead:
+            return
+        if not self.movement_enabled:
             return
 
         self.bullet_cooldown = 0
@@ -171,3 +195,19 @@ class Player:
             return
         self.game.shake(25)
         self.since_hit = 0
+        self.hp -= 1
+        self.game.flash_alpha = 100
+        if self.hp == 0:
+            self.game.flash_alpha = 255
+            self.die()
+        else:
+            pickups = self.game.pickups[:]
+            for enemy in self.game.enemies:
+                enemy.die()
+            self.game.pickups = pickups
+            dx = self.x - enemy.x
+            dy = self.y - enemy.y
+            dx, dy = dx/(abs(dx) + abs(dy)), dy/(abs(dx) + abs(dy))
+            self.x_velocity += dx * 2000
+            self.y_velocity += dy * 2000
+            self.sprite.start_animation("Hit")

@@ -6,6 +6,7 @@ from enemy import Dasher, Crawler, CrawlerCeiling
 import random
 import time
 import math
+from sprite_tools import SpriteSheet, Sprite
 
 
 class Scene:
@@ -17,6 +18,24 @@ class Scene:
 
     def next_scene(self):
         raise NotImplementedError("Scene must implement next_scene")
+
+
+class Controls(Scene):
+    def __init__(self, game):
+        self.game = game
+
+    def next_scene(self):
+        return TitleScreen(self.game)
+
+    def main(self):
+        inst = SpriteSheet("images/controls.png", (2, 1), 2)
+        sprite = Sprite(4)
+        sprite.add_animation({"Idle": inst})
+        sprite.start_animation("Idle")
+        clock = pygame.time.Clock()
+        while True:
+            dt = clock.tick(60)
+            sprite.update(dt)
 
 
 class OnBusScene(Scene):
@@ -128,7 +147,7 @@ class OnBusScene(Scene):
             surface.blit(surf2, (x + 10, y))
             y += surf.get_height()*0.85
         if self.popup_age > len(lines) + 1.5:
-            surf = self.game.score_font.render(f"${self.new_score()}0", 1, c.WHITE)
+            surf = self.game.score_font.render(f"${float(self.new_score())}0", 1, c.WHITE)
             surface.blit(surf, (x - surf.get_width()//2, 220))
 
     def new_score(self):
@@ -145,6 +164,9 @@ class OnBusScene(Scene):
 class ConnectionScene(Scene):
 
     def next_scene(self):
+        if self.game.player.dead:
+            from lose_screen import LoseScreen
+            return LoseScreen(self.game)
         return OnBusScene(self.game)
 
     def main(self):
@@ -155,6 +177,9 @@ class ConnectionScene(Scene):
         self.player.movement_enabled = True
         self.player.in_bus = False
         self.player.cash_this_level = 0
+        self.player.dead = False
+        self.player.hp = 3
+        self.player.sprite.start_animation("Running")
         self.player.y = self.corridor.floor_y() - 48
         self.player.y_velocity = -600
         self.game.enemies = []
@@ -162,11 +187,33 @@ class ConnectionScene(Scene):
         self.since_enemy = 0
         self.game.scroll_speed = 0
 
+        self.flash = pygame.Surface(c.WINDOW_SIZE)
+        self.flash.fill(c.WHITE)
+        self.flash.set_alpha(0)
+
+        self.bone = pygame.image.load("images/bone.png")
+        self.bone = pygame.transform.scale(self.bone, (self.bone.get_width()*3//2, self.bone.get_height()*3//2))
+
         self.circle_radius = 0
+
+        self.cash_disp = 0
+        self.age = 0
+        self.since_death = 0
 
         while True:
             dt = clock.tick(60)/1000
+            dt *= self.game.slowdown
+            if dt > 1/30:
+                dt = 1/30
+            self.age += dt
             events = self.game.update_globals()
+
+
+            self.flash.set_alpha(self.game.flash_alpha)
+            self.game.flash_alpha = max(0, self.game.flash_alpha - 1000*dt)
+
+            if self.game.player.dead:
+                self.since_death += dt
 
             circle_speed = 800
             if self.scene_over():
@@ -179,8 +226,9 @@ class ConnectionScene(Scene):
                 self.player.in_bus = True
                 dx = self.corridor.end_subway.x + 475 - self.player.x
                 dy = c.WINDOW_HEIGHT * 0.7 - self.player.y
-                self.player.x += dx*dt*4
-                self.player.y += dy*dt*4
+                if not self.player.dead:
+                    self.player.x += dx*dt*4
+                    self.player.y += dy*dt*4
             else:
                 self.circle_radius += circle_speed * dt
                 if self.circle_radius >= c.WINDOW_WIDTH:
@@ -203,6 +251,9 @@ class ConnectionScene(Scene):
             for pickup in self.game.pickups:
                 pickup.draw(self.game.screen)
             self.player.draw(self.game.screen)
+            self.draw_score(self.game.screen, dt)
+            if self.flash.get_alpha() > 0:
+                self.game.screen.blit(self.flash, (0, 0))
             self.draw_circle(self.game.screen)
             pygame.display.flip()
 
@@ -214,13 +265,16 @@ class ConnectionScene(Scene):
         x, y = int(self.game.player.x), int(self.game.player.y)
         pygame.draw.circle(surface, c.BLACK, (x, y), rad + width, width)
 
-
     def scene_over(self):
         if self.corridor.end_subway.x + 430 + 80 >= self.player.x >= self.corridor.end_subway.x + 430 and self.player.y >= c.WINDOW_HEIGHT//2:
+            return True
+        if self.since_death > 1:
             return True
         return False
 
     def update_scrolling(self, dt, events):
+        if self.game.player.dead:
+            return
         if self.game.scroll_speed < 350:
             self.game.scroll_speed += 200 * dt
             if self.game.scroll_speed >= 350:
@@ -274,6 +328,9 @@ class ConnectionScene(Scene):
             self.game.enemies.append(new_enemy)
 
     def update_spawning(self, dt, events):
+        if self.game.player.dead:
+            return
+
         self.since_enemy += dt
         period = 0.2 + 6/(self.game.level + 2)
         if self.since_enemy > period and self.game.scroll_speed > 200:
@@ -299,3 +356,39 @@ class ConnectionScene(Scene):
                     self.spawn_dasher]
                 num = random.choice([3, 4])
                 random.choice(choices)(num)
+
+    def draw_score(self, surface, dt):
+        dc = self.game.player.cash_this_level - self.cash_disp
+        self.cash_disp = min(self.game.player.cash_this_level, self.cash_disp + dc * 10 * dt)
+
+        text = f"${float(round(self.cash_disp, 1))}0"
+
+        color = 180 + 75 * min(dc/5, 1)
+        scale = 1 + 1.2*min(dc/30, 1)
+        surf = self.game.score_font.render(text, 1, (color, color, color))
+        surf = pygame.transform.scale(surf, (int(surf.get_width() * scale), int(surf.get_height() * scale)))
+        score_text = f"SAVINGS: ${float(self.game.score)}0"
+        score_surf = self.game.ledger_font.render(score_text, 1, (180, 180, 180))
+
+        y = 40
+        surface.blit(surf, (c.WINDOW_WIDTH//2 - surf.get_width()//2, y - surf.get_height()//2))
+        surface.blit(score_surf, (c.WINDOW_WIDTH//2 - score_surf.get_width()//2, y + surf.get_height()*0.3))
+
+        level = f"LEVEL {self.game.level}"
+        if self.age < 5:
+            surf = self.game.ledger_font.render(level, 1, (180, 180, 180))
+            surf2 = pygame.Surface(surf.get_size())
+            surf2.fill(c.BLACK)
+            surf2.blit(surf, (0, 0))
+            surf2.set_colorkey(c.BLACK)
+            if self.age > 3:
+                surf2.set_alpha((5 - self.age)/2*255)
+            surface.blit(surf2, (c.WINDOW_WIDTH//2 - surf2.get_width()//2, c.WINDOW_HEIGHT - 50))
+
+        bone = self.bone.copy()
+        color = min(180 * self.player.since_hit, 180)
+        color2 = 255 - min(75, 75 * self.player.since_hit)
+        bone.fill((color2, color, color), special_flags=pygame.BLEND_MULT)
+        surface.blit(bone, (35, 25))
+        surf = self.game.score_font.render(f"x{max(self.game.player.hp, 0)}", 1, (color2, color, color))
+        surface.blit(surf, (65, 30))

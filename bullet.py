@@ -8,7 +8,7 @@ class Bullet:
 
     shadow = None
 
-    def __init__(self, game, x, y, dir, speed=1500, radius=10, spread=17):
+    def __init__(self, game, x, y, dir, speed=1500, radius=10, spread=14):
         self.game = game
         self.x = x
         self.y = y
