@@ -90,7 +90,7 @@ class Player:
 
         mindist = 800
         for enemy in self.game.enemies:
-            if enemy.dead:
+            if enemy.dead or self.dead:
                 continue
             dist = c.distance_between_points(self.x, self.y, enemy.x, enemy.y)
             dist -= enemy.radius + 32
@@ -98,7 +98,7 @@ class Player:
                 mindist = dist
         if mindist < 0:
             mindist = 0
-        self.game.slowdown = min(0.4 + 0.6 * mindist/100, 1)
+        self.game.slowdown = min(0.4 + 0.6 * mindist/130, 1)
 
     def die(self):
         self.game.scroll_speed = 0
@@ -137,10 +137,10 @@ class Player:
         invisible_force = 40
         if not self.on_floor():
             invisible_force = 20
-        if self.x > c.WINDOW_WIDTH*0.4:
+        if self.x > c.WINDOW_WIDTH*0.5:
             diff = self.x - c.WINDOW_WIDTH*0.4
             self.x_velocity -= invisible_force*diff*dt
-        elif self.x < c.WINDOW_WIDTH*0.3:
+        elif self.x < c.WINDOW_WIDTH*0.25:
             diff = c.WINDOW_WIDTH*0.25 - self.x
             self.x_velocity += invisible_force*diff*dt
 

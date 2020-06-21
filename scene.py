@@ -2,7 +2,7 @@ import pygame
 import constants as c
 from corridor import Corridor
 from player import Player
-from enemy import Dasher, Crawler, CrawlerCeiling
+from enemy import *
 import random
 import time
 import math
@@ -133,8 +133,8 @@ class OnBusScene(Scene):
                 self.game.bus_ride.fadeout(400)
                 self.shade_target_alpha = 1
                 if self.shade_alpha == 1 and self.shade_target_alpha == 1:
-                    self.game.level += 1
                     self.game.score = self.new_score()
+                    self.game.level += 1
                     break
 
     def draw_subway_car(self, surface):
@@ -355,6 +355,10 @@ class ConnectionScene(Scene):
             new_enemy = CrawlerCeiling(self.game, c.WINDOW_WIDTH + 50 + spacing*i, 0)
             self.game.enemies.append(new_enemy)
 
+    def spawn_blocker(self, num=None):
+        new_enemy = Blocker(self.game)
+        self.game.enemies.append(new_enemy)
+
     def update_spawning(self, dt, events):
         if self.game.player.dead:
             return
@@ -370,19 +374,27 @@ class ConnectionScene(Scene):
             elif self.game.level == 2:
                 choices = [self.spawn_crawler_wave,
                     self.spawn_crawler_ceiling_wave]
-                num = random.choice([1, 2, 3])
+                num = random.choice([1, 2, 2, 3])
                 random.choice(choices)(num)
             elif self.game.level == 3:
                 choices = [self.spawn_crawler_wave,
                     self.spawn_crawler_ceiling_wave,
-                    self.spawn_dasher]
+                    self.spawn_blocker]
                 num = random.choice([2, 3])
+                random.choice(choices)(num)
+            elif self.game.level == 4:
+                choices = [self.spawn_crawler_wave,
+                    self.spawn_crawler_ceiling_wave,
+                    self.spawn_dasher,
+                    self.spawn_blocker]
+                num = random.choice([2, 3, 3, 3, 4])
                 random.choice(choices)(num)
             else:
                 choices = [self.spawn_crawler_wave,
                     self.spawn_crawler_ceiling_wave,
-                    self.spawn_dasher]
-                num = random.choice([3, 4])
+                    self.spawn_dasher,
+                    self.spawn_blocker]
+                num = random.choice([3, 4, 4])
                 random.choice(choices)(num)
 
     def draw_score(self, surface, dt):

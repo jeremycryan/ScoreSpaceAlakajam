@@ -41,8 +41,8 @@ class Cash(Pickup):
     def update(self, dt, events):
         if not self.paused:
             self.sprite.update(dt)
-        if self.game.scroll_speed < 50:
-            self.homing_range = 400
+        if self.game.scroll_speed < 120:
+            self.homing_range = 600
 
         self.velocity[0] *= 0.05 **dt
         self.velocity[1] += 1000 * dt

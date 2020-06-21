@@ -85,7 +85,7 @@ class TitleScreen(Scene):
                 self.game.bus_ride.fadeout(500)
                 self.shade_target_alpha = 1
                 if self.shade_alpha == 1 and self.shade_target_alpha == 1:
-                    self.game.level = 1
+                    self.game.level = 3
                     self.game.score = 0
                     break
 

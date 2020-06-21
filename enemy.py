@@ -21,6 +21,10 @@ dasher_dashing = SpriteSheet("images/dasher_dashing.png", (1, 1), 1, scale=2)
 dasher_damage = SpriteSheet("images/dasher_damage.png", (1, 1), 1, scale=2)
 dasher_dashing_damage = SpriteSheet("images/dasher_dashing_damage.png", (1, 1), 1, scale=2)
 
+blocker = SpriteSheet("images/blocker.png", (4, 1), 4, scale=2)
+blocker_hurt = SpriteSheet("images/blocker_hurt.png", (1, 1), 1, scale=2)
+blocker_dead = SpriteSheet("images/blocker_dead.png", (1, 1), 1, scale=2)
+
 
 class Enemy:
     def __init__(self, game, x, y, radius=60):
@@ -33,6 +37,7 @@ class Enemy:
         self.hp = 3
         self.value = 1
         self.remove_on_death = True
+        self.velocity = [0, 0]
 
     def die(self):
         self.dead = True
@@ -346,3 +351,70 @@ class CrawlerCeiling(Crawler):
         x = math.cos(angle) * self.launch_speed
         y = -math.sin(angle) * self.launch_speed
         return [x, y]
+
+
+class Blocker(Enemy):
+    def __init__(self, game):
+        self.radius = 50
+        self.game = game
+        super().__init__(game, c.WINDOW_WIDTH + self.radius, self.game.corridor.floor_y() - self.radius, self.radius)
+        self.hp = 4
+        self.value = 5
+        self.velocity = [-self.game.scroll_speed, 0]
+        self.tink_sound = pygame.mixer.Sound("sounds/tink.wav")
+        self.sprite = Sprite(10)
+        self.sprite.add_animation({"Idle": blocker, "Hurt": blocker_hurt, "Dead": blocker_dead})
+        self.sprite.start_animation("Idle")
+        self.shield_surf = pygame.image.load("images/blocker_shield.png")
+        self.shield_surf = pygame.transform.scale(self.shield_surf, (self.shield_surf.get_width()*2, self.shield_surf.get_height()*2))
+        self.shield_offset = 0
+        self.since_hit = 10
+        self.playing_idle = True
+        self.remove_on_death = False
+
+    def update(self, dt, events):
+        super().update(dt, events)
+        self.sprite.update(dt)
+        self.x += self.velocity[0] * dt
+        self.y += self.velocity[1] * dt
+        self.shield_offset *= 0.003**dt
+        self.since_hit += dt
+        if self.since_hit > 0.04 and self.playing_idle == False and not self.dead:
+            self.playing_idle = True
+            self.sprite.start_animation("Idle")
+        if self.dead:
+            self.sprite.start_animation("Dead")
+
+        if self.dead:
+            self.velocity[1] += 2500*dt
+        if self.y >= self.game.corridor.floor_y() - self.radius and self.velocity[1] >= 0:
+            self.y = self.game.corridor.floor_y() - self.radius
+            self.velocity = [-self.game.scroll_speed, 0]
+
+
+    def draw(self, surface):
+        sx, sy = self.game.get_shake_offset()
+        self.sprite.set_position((sx + self.x, sy + self.y))
+        self.sprite.draw(surface)
+
+        x = self.x - self.radius + sx - 20 + self.shield_offset
+        y = self.y - self.radius + sy
+        if not self.dead:
+            surface.blit(self.shield_surf, (x, y))
+
+    def get_hit_by(self, bullet):
+        if self.dead:
+            return
+        if bullet.x > self.x - self.radius * 0.75 and bullet.dir[1]*2 > bullet.dir[0]:
+            super().get_hit_by(bullet)
+            self.sprite.start_animation("Hurt")
+            self.playing_idle = False
+            self.since_hit = 0
+        else:
+            self.tink_sound.play()
+            self.shield_offset = 15
+        pass
+
+    def die(self):
+        super().die()
+        self.velocity = [random.random()*200 - 100 - self.game.scroll_speed, -300]
