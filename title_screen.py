@@ -1,6 +1,6 @@
 import pygame
 import constants as c
-from scene import ConnectionScene, Scene
+from scene import ConnectionScene, Scene, Controls
 import random
 import time
 
@@ -28,6 +28,9 @@ class TitleScreen(Scene):
         self.title = pygame.transform.scale(self.title, (self.title.get_width()*2, self.title.get_height()*2))
 
         self.frame = pygame.image.load("images/frame.png")
+
+        self.game.bus_ride.play(-1)
+        self.game.battle_music.fadeout(400)
 
         while True:
             dt = clock.tick(60)/1000
@@ -67,7 +70,9 @@ class TitleScreen(Scene):
 
             for event in events:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    self.proceed = True
+                    if self.proceed == False:
+                        self.proceed = True
+                        self.game.press_enter.play()
 
             x = c.WINDOW_WIDTH//2 - self.title.get_width()//2
             y = 40
@@ -77,6 +82,7 @@ class TitleScreen(Scene):
             pygame.display.flip()
 
             if self.proceed:
+                self.game.bus_ride.fadeout(500)
                 self.shade_target_alpha = 1
                 if self.shade_alpha == 1 and self.shade_target_alpha == 1:
                     self.game.level = 1
@@ -90,4 +96,8 @@ class TitleScreen(Scene):
 
 
     def next_scene(self):
-        return ConnectionScene(self.game)
+        if self.game.first_play:
+            return Controls(self.game)
+        else:
+            self.game.first_play = False
+            return ConnectionScene(self.game)

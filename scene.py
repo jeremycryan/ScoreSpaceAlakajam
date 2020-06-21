@@ -25,7 +25,7 @@ class Controls(Scene):
         self.game = game
 
     def next_scene(self):
-        return TitleScreen(self.game)
+        return ConnectionScene(self.game)
 
     def main(self):
         inst = SpriteSheet("images/controls.png", (2, 1), 2)
@@ -33,9 +33,28 @@ class Controls(Scene):
         sprite.add_animation({"Idle": inst})
         sprite.start_animation("Idle")
         clock = pygame.time.Clock()
+        age = 0
+        shade = pygame.Surface(c.WINDOW_SIZE)
+        shade.fill(c.BLACK)
+        shade.set_alpha(255)
         while True:
-            dt = clock.tick(60)
+            end = 4
+            if age < 0.25:
+                shade.set_alpha((0.25 - age)*255/0.25)
+            elif age > end - 0.25:
+                shade.set_alpha((age - end + 0.25)*255/0.25)
+            else:
+                shade.set_alpha(0)
+            sprite.set_position((c.WINDOW_WIDTH//2, c.WINDOW_HEIGHT//2))
+            dt = clock.tick(60)/1000
+            age += dt
+            events = self.game.update_globals()
             sprite.update(dt)
+            sprite.draw(self.game.screen)
+            self.game.screen.blit(shade, (0, 0))
+            pygame.display.flip()
+            if age >= end:
+                break
 
 
 class OnBusScene(Scene):
@@ -59,6 +78,8 @@ class OnBusScene(Scene):
         self.popup_visible = True
 
         self.frame = pygame.image.load("images/frame.png")
+
+        self.game.bus_ride.play(-1)
 
         while True:
             dt = clock.tick(60)/1000
@@ -101,12 +122,15 @@ class OnBusScene(Scene):
 
                 for event in events:
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                        self.proceed = True
+                        if self.proceed == False:
+                            self.proceed = True
+                            self.game.press_enter.play()
 
             self.game.screen.blit(self.shade, (0, 0))
             pygame.display.flip()
 
             if self.proceed and self.popup_age > 5:
+                self.game.bus_ride.fadeout(400)
                 self.shade_target_alpha = 1
                 if self.shade_alpha == 1 and self.shade_target_alpha == 1:
                     self.game.level += 1
@@ -200,13 +224,16 @@ class ConnectionScene(Scene):
         self.age = 0
         self.since_death = 0
 
+        self.game.battle_music.play(-1)
+
         while True:
             dt = clock.tick(60)/1000
+            events = self.game.update_globals()
+            self.game.update_slowdown(dt, events)
             dt *= self.game.slowdown
             if dt > 1/30:
                 dt = 1/30
             self.age += dt
-            events = self.game.update_globals()
 
 
             self.flash.set_alpha(self.game.flash_alpha)
@@ -217,6 +244,7 @@ class ConnectionScene(Scene):
 
             circle_speed = 800
             if self.scene_over():
+                self.game.battle_music.fadeout(800)
                 if self.circle_radius <= 0:
                     break
                 self.circle_radius -= circle_speed * dt

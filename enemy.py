@@ -65,11 +65,18 @@ class Enemy:
         self.hp -= 1
         if self.hp <= 0:
             self.die()
+        self.game.bullet_impact.play()
 
     def is_colliding_with_player(self, player):
         # can't collide if you're dead
         if self.dead:
             return False
+
+        dist = c.distance_between_points(self.x, self.y, player.x, player.y)
+        dist -= self.radius
+        if dist < player.collision_radius:
+            return True
+        return False
 
         # test center of circle inside player
         if self.x < player.x + player.width//2:
@@ -121,6 +128,7 @@ class Dasher(Enemy):
 
         self.hover_length = 2
         self.x_velocity = 0
+        self.velocity = [-1, -1]
         self.hp = 7
 
         self.value = 6

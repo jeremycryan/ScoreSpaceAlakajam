@@ -29,6 +29,12 @@ class Player:
         self.bullet_cooldown = 0
         self.bullet_period = 0.10
 
+        self.gunfire = pygame.mixer.Sound("sounds/gunfire.wav")
+        self.hurt_noise = pygame.mixer.Sound("sounds/hurt.wav")
+        self.death_noise = pygame.mixer.Sound("sounds/death.wav")
+        self.hurt_noise.set_volume(0.5)
+        self.jump_noise = pygame.mixer.Sound("sounds/jump.wav")
+
         self.sprite = Sprite(7)
         self.sprite.add_animation({"Running": player_running, "Dead": player_dead, "Hit": player_hit})
         self.sprite.start_animation("Running")
@@ -45,11 +51,17 @@ class Player:
         self.cash_this_level = 0
         self.dead = False
 
+        self.collision_radius = 24
+        self.hit_circle_radius = 1000
+
         self.hp = 3
 
     def update(self, dt, events):
         if pygame.mouse.get_pressed()[0]:
             self.shoot()
+
+        if self.hit_circle_radius < 1000:
+            self.hit_circle_radius += 2500*dt
 
         if self.movement_enabled:
             self.y_velocity += 2500 * dt
@@ -76,12 +88,25 @@ class Player:
 
         self.sprite.update(dt)
 
+        mindist = 800
+        for enemy in self.game.enemies:
+            if enemy.dead:
+                continue
+            dist = c.distance_between_points(self.x, self.y, enemy.x, enemy.y)
+            dist -= enemy.radius + 32
+            if dist < mindist:
+                mindist = dist
+        if mindist < 0:
+            mindist = 0
+        self.game.slowdown = min(0.4 + 0.6 * mindist/100, 1)
+
     def die(self):
         self.game.scroll_speed = 0
         self.dead = True
         self.x_velocity = 500
         self.y_velocity = -1000
         self.sprite.start_animation("Dead")
+        self.death_noise.play()
 
     def update_movement(self, dt, events):
         if not self.movement_enabled:
@@ -126,6 +151,7 @@ class Player:
 
     def jump(self):
         if self.on_floor() or self.extra_jumps > 0:
+            self.jump_noise.play()
             self.y_velocity = -660
             if not self.on_floor():
                 self.extra_jumps -= 1
@@ -147,8 +173,13 @@ class Player:
         gy = y - gun.get_height()//2 - 14
         surface.blit(gun, (gx, gy))
 
+        if self.hit_circle_radius < 1000:
+            pass
+            #pygame.draw.circle(surface, c.WHITE, (int(self.x), int(self.y)), int(self.hit_circle_radius+5), 5)
+
         for bullet in self.bullets:
             bullet.draw(surface)
+
 
     def shoot(self):
         if not self.bullet_cooldown > self.bullet_period:
@@ -174,18 +205,22 @@ class Player:
         if not self.on_floor():
             self.y_velocity -= recoil * dir[1]
 
+        self.gunfire.play()
+
     def on_floor(self):
-        if self.y >= c.WINDOW_HEIGHT//2 + self.game.corridor.width//2 - self.height//2:
+        off = self.height//3
+        if self.y >= c.WINDOW_HEIGHT//2 + self.game.corridor.width//2 - off:
             self.extra_jumps = 1
             return True
         return False
 
     def collide_corridor(self, corridor):
-        if self.y + self.height//2 > c.WINDOW_HEIGHT//2 + corridor.width//2:
-            self.y = c.WINDOW_HEIGHT//2 + corridor.width//2 - self.height//2
+        off = self.height//3
+        if self.y + off > c.WINDOW_HEIGHT//2 + corridor.width//2:
+            self.y = c.WINDOW_HEIGHT//2 + corridor.width//2 - off
             self.y_velocity = 0
-        elif self.y - self.height//2 < c.WINDOW_HEIGHT//2 - corridor.width//2:
-            self.y = c.WINDOW_HEIGHT//2 - corridor.width//2 + self.height//2
+        elif self.y - off < c.WINDOW_HEIGHT//2 - corridor.width//2:
+            self.y = c.WINDOW_HEIGHT//2 - corridor.width//2 + off
             self.y_velocity = 0
 
     def get_hit_by(self, enemy):
@@ -197,10 +232,13 @@ class Player:
         self.since_hit = 0
         self.hp -= 1
         self.game.flash_alpha = 100
+        self.game.slowdown = 0.1
         if self.hp == 0:
             self.game.flash_alpha = 255
             self.die()
         else:
+            self.hurt_noise.play()
+            self.hit_circle_radius = 0
             pickups = self.game.pickups[:]
             for enemy in self.game.enemies:
                 enemy.die()
@@ -208,6 +246,8 @@ class Player:
             dx = self.x - enemy.x
             dy = self.y - enemy.y
             dx, dy = dx/(abs(dx) + abs(dy)), dy/(abs(dx) + abs(dy))
-            self.x_velocity += dx * 2000
-            self.y_velocity += dy * 2000
+            self.x_velocity += dx * 1000
+            self.y_velocity += dy * 1000
+            enemy.velocity[0] -= dx*1000
+            enemy.velocity[1] -= dy*1000
             self.sprite.start_animation("Hit")

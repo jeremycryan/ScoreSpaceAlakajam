@@ -69,3 +69,4 @@ class Cash(Pickup):
 
     def get(self):
         self.game.player.cash_this_level += 5
+        self.game.pickup_sound.play()

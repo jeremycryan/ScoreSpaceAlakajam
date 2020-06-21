@@ -24,6 +24,9 @@ class LoseScreen(Scene):
 
         self.frame = pygame.image.load("images/frame.png")
 
+        self.game.bus_ride.fadeout(400)
+        self.game.battle_music.fadeout(400)
+
         while True:
             dt = clock.tick(60)/1000
             if dt > 1/30:
@@ -61,7 +64,9 @@ class LoseScreen(Scene):
 
                 for event in events:
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                        self.proceed = True
+                        if self.proceed == False:
+                            self.proceed = True
+                            self.game.press_enter.play()
 
             self.game.screen.blit(self.shade, (0, 0))
             pygame.display.flip()

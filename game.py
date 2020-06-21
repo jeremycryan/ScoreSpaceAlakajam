@@ -11,6 +11,7 @@ from lose_screen import LoseScreen
 
 class Game:
     def __init__(self):
+        pygame.mixer.init(44100, -16, 2, 2048)
         pygame.init()
         self.screen = pygame.display.set_mode(c.WINDOW_SIZE)
         self.corridor = Corridor(self)
@@ -26,14 +27,29 @@ class Game:
         self.score_font = pygame.font.Font("fonts/Pixeled.ttf", 20)
         self.score = 0
         self.slowdown = 1.0
+        self.target_slowdown = 1.0
         self.flash_alpha = 0
+        self.first_play = True
         pygame.display.set_caption("Public Transit Battle Corgi Tycoon")
+        self.battle_music = pygame.mixer.Sound("sounds/battle_corgi.wav")
+        self.bus_ride = pygame.mixer.Sound("sounds/bus_ride.wav")
+        self.bullet_impact = pygame.mixer.Sound("sounds/bullet_impact.wav")
+        self.pickup_sound = pygame.mixer.Sound("sounds/cash_pickup.wav")
+        self.press_enter = pygame.mixer.Sound("sounds/press_enter.wav")
+        self.press_enter.set_volume(0.4)
+        self.pickup_sound.set_volume(0.5)
         self.main()
 
     def update_screenshake(self, dt, events):
         self.shake_period += dt
         self.shake_amp *= 0.05**dt
         self.shake_amp = max(0, self.shake_amp - 30*dt)
+
+    def update_slowdown(self, dt, events):
+        if self.target_slowdown > self.slowdown:
+            self.slowdown = min(self.target_slowdown, self.slowdown + dt)
+        elif self.target_slowdown < self.slowdown:
+            self.slowdown = max(self.target_slowdown, self.slowdown - dt)
 
     def shake(self, amp):
         self.shake_amp = max(self.shake_amp, amp)
