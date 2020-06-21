@@ -39,6 +39,10 @@ class Player:
         self.movement_enabled = True
         self.in_bus = False
 
+        self.cash = 0
+        self.cash_this_level = 0
+        self.dead = False
+
     def update(self, dt, events):
         if pygame.mouse.get_pressed()[0]:
             self.shoot()

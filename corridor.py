@@ -4,7 +4,7 @@ from subway import Subway, EndSubway
 
 
 class Corridor:
-    def __init__(self, game):
+    def __init__(self, game, length=5000):
         self.game = game
         self.width = 400
 
@@ -30,7 +30,11 @@ class Corridor:
         self.platform_tile = pygame.image.load("images/platform_tile.png")
 
         self.subway = Subway(self.game)
-        self.end_subway = EndSubway(self.game, 4000)
+        self.end_subway = EndSubway(self.game, length)
+
+
+    def floor_y(self):
+        return c.WINDOW_HEIGHT//2 + self.width//2
 
 
     def update(self, dt, events):

@@ -18,6 +18,10 @@ class Game:
         self.scroll_speed = 350
         self.shake_amp = 0
         self.shake_period = 0
+        self.level = 1
+        self.ledger_font = pygame.font.Font("fonts/Pixeled.ttf", 10)
+        self.score_font = pygame.font.Font("fonts/Pixeled.ttf", 20)
+        self.score = 0
         self.main()
 
     def update_screenshake(self, dt, events):
@@ -47,6 +51,7 @@ class Game:
         while True:
             current_scene.main()
             current_scene = current_scene.next_scene()
+            time.sleep(0.2)
 
 
 

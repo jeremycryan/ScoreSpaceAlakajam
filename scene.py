@@ -4,6 +4,8 @@ from corridor import Corridor
 from player import Player
 from enemy import Dasher, Crawler, CrawlerCeiling
 import random
+import time
+import math
 
 
 class Scene:
@@ -21,31 +23,140 @@ class OnBusScene(Scene):
     def main(self):
         self.car_surf = pygame.image.load("images/subway_car_interior.png")
         clock = pygame.time.Clock()
+        self.age = 0
+
+        self.shake_target = [0, 0]
+        self.shake_pos = [1, 0]
+        self.shake_amp = 15
+
+        self.shade = pygame.Surface(c.WINDOW_SIZE)
+        self.shade.fill(c.BLACK)
+        self.shade.set_alpha(255)
+        self.shade_alpha = 1.0
+        self.shade_target_alpha = 0
+
+        self.proceed = False
+        self.popup_age = 0
+        self.popup_visible = True
+
+        self.frame = pygame.image.load("images/frame.png")
 
         while True:
-            dt = clock.tick(60)
+            dt = clock.tick(60)/1000
+            if dt > 1/30:
+                dt = 1/30
             events = self.game.update_globals()
+            self.age += dt
 
-    def draw_subway_car(self):
-        x = c.WINDOW_WIDTH//2 - self.car_surf.get_width()//2
-        y = c.WINDOW_HEIGHT//2 - self.car_surf.get_height()//2
+            if self.popup_visible:
+                self.popup_age += dt
+
+            speed = 2
+            if self.shade_alpha > self.shade_target_alpha:
+                self.shade_alpha = max(0, self.shade_alpha - speed*dt)
+            elif self.shade_alpha < self.shade_target_alpha:
+                self.shade_alpha = min(1.0, self.shade_alpha + speed*dt)
+            self.shade.set_alpha(self.shade_alpha * 255)
+
+
+            dx = self.shake_target[0] - self.shake_pos[0]
+            dy = self.shake_target[1] - self.shake_pos[1]
+            self.shake_pos[0] += dx*dt*4
+            self.shake_pos[1] += dy*dt*4
+
+            if c.distance_between_points(*self.shake_pos, *self.shake_target) < 2:
+                self.shake_target = [random.random()*2 - 1, random.random()*2 - 1]
+
+            self.game.screen.fill(c.BLACK)
+            self.draw_subway_car(self.game.screen)
+            if self.popup_visible:
+                self.draw_popup(self.game.screen)
+
+            if self.popup_age > 6.5:
+                text = "PRESS ENTER TO CONTINUE"
+                if time.time() % 1 < 0.7:
+                    surf = self.game.ledger_font.render(text, 0, (c.WHITE))
+                    x = c.WINDOW_WIDTH//2 - surf.get_width()//2
+                    y = c.WINDOW_HEIGHT - 40
+                    self.game.screen.blit(surf, (x, y))
+
+                for event in events:
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                        self.proceed = True
+
+            self.game.screen.blit(self.shade, (0, 0))
+            pygame.display.flip()
+
+            if self.proceed and self.popup_age > 5:
+                self.shade_target_alpha = 1
+                if self.shade_alpha == 1 and self.shade_target_alpha == 1:
+                    self.game.level += 1
+                    self.game.score = self.new_score()
+                    break
+
+    def draw_subway_car(self, surface):
+        x = c.WINDOW_WIDTH//2 - self.car_surf.get_width()//2 + self.shake_pos[0] * self.shake_amp
+        y = c.WINDOW_HEIGHT//2 - self.car_surf.get_height()//2 + self.shake_pos[1] * self.shake_amp
+        surface.blit(self.car_surf, (x, y))
+
+    def draw_popup(self, surface):
+        lines = ["CASH:", "x LEVEL:", "+ SAVINGS:"]
+        if not self.game.player.dead:
+            lines.append("- FARE:")
+
+        d = {"CASH:": self.game.player.cash_this_level,
+            "x LEVEL:": self.game.level,
+            "+ SAVINGS:": self.game.score,
+            "- FARE:": 1.50}
+
+        x = c.WINDOW_WIDTH//2
+        amt = 5000 * 2**(-self.popup_age * 9)
+        y = min(130, 140 - amt)
+        surface.blit(self.frame, (c.WINDOW_WIDTH//2 - self.frame.get_width()//2, y-35))
+        for i, line in enumerate(lines):
+            if self.popup_age < i + 1.5:
+                break
+            surf = self.game.ledger_font.render(line, 1, c.WHITE)
+            color = (255, 100, 100) if line == "- FARE:" else (100, 255, 100)
+            value = f"{d[line]}"
+            if line in ["CASH:", "- FARE:", "+ SAVINGS:"]:
+                value = f"${value}"
+            if line == "- FARE:":
+                value += "0"
+            surf2 = self.game.ledger_font.render(value, 1, color)
+            surface.blit(surf, (x - surf.get_width(), y))
+            surface.blit(surf2, (x + 10, y))
+            y += surf.get_height()*0.85
+        if self.popup_age > len(lines) + 1.5:
+            surf = self.game.score_font.render(f"${self.new_score()}0", 1, c.WHITE)
+            surface.blit(surf, (x - surf.get_width()//2, 220))
+
+    def new_score(self):
+        new = self.game.score + self.game.player.cash_this_level * self.game.level
+        if not self.game.player.dead:
+            new -= 1.50
+        return new
+
 
     def next_scene(self):
-        return ConnectionScene()
+        return ConnectionScene(self.game)
 
 
 class ConnectionScene(Scene):
 
     def next_scene(self):
-        return ConnectionScene(self.game)
+        return OnBusScene(self.game)
 
     def main(self):
         clock = pygame.time.Clock()
-        self.corridor = Corridor(self.game)
+        self.corridor = Corridor(self.game, length=3000 + 3000*self.game.level)
         self.corridor.x = 0
         self.player = self.game.player
         self.player.movement_enabled = True
         self.player.in_bus = False
+        self.player.cash_this_level = 0
+        self.player.y = self.corridor.floor_y() - 48
+        self.player.y_velocity = -600
         self.game.enemies = []
         self.game.pickups = []
         self.since_enemy = 0
@@ -131,20 +242,16 @@ class ConnectionScene(Scene):
     def update_enemies(self, dt, events):
         for enemy in self.game.enemies:
             enemy.update(dt, events)
-        self.since_enemy += dt
-        if self.since_enemy > 1 and self.game.scroll_speed > 100:
-            choices = [self.spawn_crawler_wave,
-                    self.spawn_crawler_ceiling_wave,
-                    self.spawn_dasher]
-            random.choice(choices)()
-            self.since_enemy = 0
+
+        self.update_spawning(dt, events)
+
         for enemy in self.game.enemies[::-1]:
             if enemy.dead and enemy.remove_on_death:
                 self.game.enemies.remove(enemy)
             elif enemy.x < -500 or enemy.x > c.WINDOW_WIDTH + 500 or enemy.y < -500 or enemy.y > c.WINDOW_HEIGHT + 500:
                 self.game.enemies.remove(enemy)
 
-    def spawn_dasher(self):
+    def spawn_dasher(self, length=1):
         new_enemy = Dasher(self.game, 0, 0)
         y_min = c.WINDOW_HEIGHT//2 - self.corridor.width//2 + new_enemy.radius
         y_max = y_min + self.corridor.width - new_enemy.radius*2
@@ -165,3 +272,30 @@ class ConnectionScene(Scene):
         for i in range(length):
             new_enemy = CrawlerCeiling(self.game, c.WINDOW_WIDTH + 50 + spacing*i, 0)
             self.game.enemies.append(new_enemy)
+
+    def update_spawning(self, dt, events):
+        self.since_enemy += dt
+        period = 0.2 + 6/(self.game.level + 2)
+        if self.since_enemy > period and self.game.scroll_speed > 200:
+            self.since_enemy = 0
+            if self.game.level == 1:
+                choices = [self.spawn_crawler_wave]
+                num = random.choice([1, 2])
+                random.choice(choices)(num)
+            elif self.game.level == 2:
+                choices = [self.spawn_crawler_wave,
+                    self.spawn_crawler_ceiling_wave]
+                num = random.choice([1, 2, 3])
+                random.choice(choices)(num)
+            elif self.game.level == 3:
+                choices = [self.spawn_crawler_wave,
+                    self.spawn_crawler_ceiling_wave,
+                    self.spawn_dasher]
+                num = random.choice([2, 3])
+                random.choice(choices)(num)
+            else:
+                choices = [self.spawn_crawler_wave,
+                    self.spawn_crawler_ceiling_wave,
+                    self.spawn_dasher]
+                num = random.choice([3, 4])
+                random.choice(choices)(num)

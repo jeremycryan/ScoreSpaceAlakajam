@@ -123,7 +123,7 @@ class Dasher(Enemy):
         self.x_velocity = 0
         self.hp = 7
 
-        self.value = 10
+        self.value = 6
 
         self.shiver_x = 0
         self.shiver_y = 0
@@ -163,7 +163,7 @@ class Dasher(Enemy):
         self.shiver_y += (self.shiver_target[1] - self.shiver_y) * self.shiver_intensity * dt * 2.5
 
         self.check_player_bullets()
-        if self.hp <= 0:
+        if self.hp <= 0 and not self.dead:
             self.die()
 
         self.since_hit += dt
@@ -232,7 +232,7 @@ class Crawler(Enemy):
         self.hurt_playing = False
         self.since_land = 10
 
-        self.value = 5
+        self.value = 3
 
     def get_hit_by(self, bullet):
         super().get_hit_by(bullet)
