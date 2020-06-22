@@ -359,7 +359,7 @@ class Blocker(Enemy):
         self.game = game
         super().__init__(game, c.WINDOW_WIDTH + self.radius, self.game.corridor.floor_y() - self.radius, self.radius)
         self.hp = 4
-        self.value = 5
+        self.value = 6
         self.velocity = [-self.game.scroll_speed, 0]
         self.tink_sound = pygame.mixer.Sound("sounds/tink.wav")
         self.sprite = Sprite(10)

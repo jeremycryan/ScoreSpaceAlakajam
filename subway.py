@@ -30,6 +30,8 @@ class Subway:
     def update(self, dt, events):
         self.age += dt
         if self.age >= 0.2:
+            if self.door_speed == 0:
+                self.game.door_close.play()
             self.door_speed -= dt * 10
         self.doors_open = min(max(0, self.doors_open + self.door_speed*dt), 1)
         if self.age >= 3:

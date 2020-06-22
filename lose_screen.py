@@ -2,7 +2,7 @@ import pygame
 import time
 from scene import Scene
 import constants as c
-from title_screen import TitleScreen
+from high_scores import HighScores
 
 
 class LoseScreen(Scene):
@@ -22,7 +22,7 @@ class LoseScreen(Scene):
         self.popup_visible = True
         self.game.player.dead = True
 
-        self.frame = pygame.image.load("images/frame.png")
+        self.frame = pygame.image.load("images/lose_frame.png")
 
         self.game.bus_ride.fadeout(400)
         self.game.battle_music.fadeout(400)
@@ -50,7 +50,7 @@ class LoseScreen(Scene):
                 self.draw_popup(self.game.screen)
 
             if self.popup_age > 6.5:
-                text = "PRESS ENTER TO RESTART"
+                text = "PRESS ENTER TO SUBMIT SCORE"
                 if time.time() % 1 < 0.7:
                     surf = self.game.ledger_font.render(text, 0, (c.WHITE))
                     x = c.WINDOW_WIDTH//2 - surf.get_width()//2
@@ -74,7 +74,6 @@ class LoseScreen(Scene):
             if self.proceed and self.popup_age > 5:
                 self.shade_target_alpha = 1
                 if self.shade_alpha == 1 and self.shade_target_alpha == 1:
-                    self.game.level += 1
                     self.game.score = self.new_score()
                     break
 
@@ -123,4 +122,4 @@ class LoseScreen(Scene):
 
 
     def next_scene(self):
-        return TitleScreen(self.game)
+        return HighScores(self.game)

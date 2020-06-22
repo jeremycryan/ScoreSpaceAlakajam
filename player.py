@@ -3,6 +3,7 @@ import constants as c
 from bullet import Bullet
 from sprite_tools import SpriteSheet, Sprite
 import math
+from particle import Shell
 
 
 player_running = SpriteSheet("images/player.png", (1, 1), 1, scale=2)
@@ -190,6 +191,8 @@ class Player:
             return
 
         self.bullet_cooldown = 0
+
+        self.game.particles.append(Shell(self.game, self.x, self.y))
 
         mpos = pygame.mouse.get_pos()
         dx = mpos[0] - self.x

@@ -54,6 +54,7 @@ class Controls(Scene):
             self.game.screen.blit(shade, (0, 0))
             pygame.display.flip()
             if age >= end:
+                self.game.bus_ride.fadeout(500)
                 break
 
 
@@ -208,12 +209,17 @@ class ConnectionScene(Scene):
         self.player.y_velocity = -600
         self.game.enemies = []
         self.game.pickups = []
+        self.game.particles = []
         self.since_enemy = 0
         self.game.scroll_speed = 0
 
         self.flash = pygame.Surface(c.WINDOW_SIZE)
         self.flash.fill(c.WHITE)
         self.flash.set_alpha(0)
+
+        self.circle_surf = pygame.Surface(c.WINDOW_SIZE)
+        self.circle_surf.fill(c.BLACK)
+
 
         self.bone = pygame.image.load("images/bone.png")
         self.bone = pygame.transform.scale(self.bone, (self.bone.get_width()*3//2, self.bone.get_height()*3//2))
@@ -223,6 +229,10 @@ class ConnectionScene(Scene):
         self.cash_disp = 0
         self.age = 0
         self.since_death = 0
+
+        self.train_played = False
+        self.train_sound = pygame.mixer.Sound("sounds/train.wav")
+        self.train_sound.set_volume(1.0)
 
         self.game.battle_music.play(-1)
 
@@ -235,6 +245,10 @@ class ConnectionScene(Scene):
                 dt = 1/30
             self.age += dt
 
+            if self.age > 1.7 and self.train_played == False:
+                self.train_sound.play()
+                self.train_played = True
+
 
             self.flash.set_alpha(self.game.flash_alpha)
             self.game.flash_alpha = max(0, self.game.flash_alpha - 1000*dt)
@@ -242,7 +256,7 @@ class ConnectionScene(Scene):
             if self.game.player.dead:
                 self.since_death += dt
 
-            circle_speed = 800
+            circle_speed = 1200
             if self.scene_over():
                 self.game.battle_music.fadeout(800)
                 if self.circle_radius <= 0:
@@ -286,12 +300,12 @@ class ConnectionScene(Scene):
             pygame.display.flip()
 
     def draw_circle(self, surface):
-        width = max(1, int(700 - self.circle_radius))
-        if self.circle_radius >= c.WINDOW_WIDTH:
+        if self.circle_radius >= 600:
             return
-        rad = int(self.circle_radius)
+        self.circle_surf.fill(c.BLACK)
         x, y = int(self.game.player.x), int(self.game.player.y)
-        pygame.draw.circle(surface, c.BLACK, (x, y), rad + width, width)
+        pygame.draw.circle(self.circle_surf, c.WHITE, (x, y), int(self.circle_radius))
+        self.game.screen.blit(self.circle_surf, (0, 0), special_flags=pygame.BLEND_MULT)
 
     def scene_over(self):
         if self.corridor.end_subway.x + 430 + 80 >= self.player.x >= self.corridor.end_subway.x + 430 and self.player.y >= c.WINDOW_HEIGHT//2:

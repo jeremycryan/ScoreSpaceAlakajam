@@ -7,6 +7,8 @@ import time
 
 from title_screen import TitleScreen
 from lose_screen import LoseScreen
+from high_scores import HighScores
+from story_scene import StoryScene
 
 
 class Game:
@@ -26,18 +28,25 @@ class Game:
         self.ledger_font = pygame.font.Font("fonts/Pixeled.ttf", 10)
         self.score_font = pygame.font.Font("fonts/Pixeled.ttf", 20)
         self.score = 0
+        self.name = "User" + str(int(random.random()*100))
         self.slowdown = 1.0
         self.target_slowdown = 1.0
         self.flash_alpha = 0
         self.first_play = True
         pygame.display.set_caption("Public Transit Battle Corgi Tycoon")
         self.battle_music = pygame.mixer.Sound("sounds/battle_corgi.wav")
+        self.battle_music.set_volume(0.8)
         self.bus_ride = pygame.mixer.Sound("sounds/bus_ride.wav")
+        self.bus_ride.set_volume(0.8)
         self.bullet_impact = pygame.mixer.Sound("sounds/bullet_impact.wav")
         self.pickup_sound = pygame.mixer.Sound("sounds/cash_pickup.wav")
         self.press_enter = pygame.mixer.Sound("sounds/press_enter.wav")
         self.press_enter.set_volume(0.4)
         self.pickup_sound.set_volume(0.5)
+        self.muffled_train = pygame.mixer.Sound("sounds/muffled_train.wav")
+        self.door_close = pygame.mixer.Sound("sounds/door_close.wav")
+        self.nope = pygame.mixer.Sound("sounds/nope.wav")
+        self.door_close.set_volume(0.3)
         self.main()
 
     def update_screenshake(self, dt, events):
@@ -69,7 +78,7 @@ class Game:
         return events
 
     def main(self):
-        current_scene = TitleScreen(self)
+        current_scene = StoryScene(self)
         while True:
             current_scene.main()
             current_scene = current_scene.next_scene()

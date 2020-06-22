@@ -3,6 +3,7 @@ import constants as c
 from scene import ConnectionScene, Scene, Controls
 import random
 import time
+from name_him import NameHim
 
 
 class TitleScreen(Scene):
@@ -31,6 +32,7 @@ class TitleScreen(Scene):
 
         self.game.bus_ride.play(-1)
         self.game.battle_music.fadeout(400)
+        self.since_train = 10
 
         while True:
             dt = clock.tick(60)/1000
@@ -38,6 +40,11 @@ class TitleScreen(Scene):
                 dt = 1/30
             events = self.game.update_globals()
             self.age += dt
+
+            self.since_train += dt
+            if self.since_train > 5:
+                self.game.muffled_train.play()
+                self.since_train = 0
 
             if self.popup_visible:
                 self.popup_age += dt
@@ -82,10 +89,12 @@ class TitleScreen(Scene):
             pygame.display.flip()
 
             if self.proceed:
-                self.game.bus_ride.fadeout(500)
+                if not self.game.first_play:
+                    self.game.bus_ride.fadeout(500)
+                self.game.muffled_train.fadeout(500)
                 self.shade_target_alpha = 1
                 if self.shade_alpha == 1 and self.shade_target_alpha == 1:
-                    self.game.level = 3
+                    self.game.level = 1
                     self.game.score = 0
                     break
 
@@ -97,7 +106,7 @@ class TitleScreen(Scene):
 
     def next_scene(self):
         if self.game.first_play:
-            return Controls(self.game)
-        else:
             self.game.first_play = False
+            return NameHim(self.game)
+        else:
             return ConnectionScene(self.game)
